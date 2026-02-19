@@ -8,7 +8,7 @@ fi
 
 echo "Installing Python dependencies for machine_learning_sample..."
 
-pip install --quiet \
+python -m pip install --quiet \
   numpy \
   pandas \
   matplotlib \
