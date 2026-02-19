@@ -20,3 +20,17 @@ machine_learning_sample/
 
 This notebook demonstrates a complete machine learning pipeline for detecting fraudulent online payment transactions. It's an excellent example of binary classification applied to a real-world problem in financial technology.
 
+
+### 2. autoencoders using PyTorch (`autoencoder_hands_on.ipynb`)
+
+This notebook provides a hands-on guide to understanding and implementing autoencoders using PyTorch. It includes the following sections:
+
+1. Loading and preprocessing the MNIST dataset.
+
+2. Designing and training a simple fully-connected autoencoder to reconstruct images.
+
+3. Visualizing image reconstructions and exploring the latent space representations.
+
+4. Extending the model to a denoising autoencoder, aimed at reconstructing clean images from noisy inputs.
+
+5. Suggestions for further experimentation, such as using convolutional layers, adding sparsity penalties, or exploring variational autoencoders (VAEs).
