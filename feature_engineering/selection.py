@@ -192,7 +192,9 @@ def pca_compress(
     n_components: int | float = 0.95,
     prefix: str = "pca",
     fit_df: pd.DataFrame | None = None,
+    pca: PCA | None = None,
 ) -> tuple[pd.DataFrame, PCA]:
+
     """
     Replace ``cols`` with their principal components, retaining
     ``n_components`` (int = exact, float = variance explained).
@@ -227,8 +229,9 @@ def pca_compress(
     data_fit = fit_source[present].fillna(0)
     data_tr = df[present].fillna(0)
 
-    pca = PCA(n_components=n_components, random_state=42)
-    pca.fit(data_fit)
+    if pca is None:
+        pca = PCA(n_components=n_components, random_state=42)
+        pca.fit(data_fit)
 
     transformed = pca.transform(data_tr)
     n_out = transformed.shape[1]
