@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project demonstrates various machine learning techniques and algorithms through practical implementations. It serves as a comprehensive sample repository showcasing different aspects of the machine learning workflow, from data preprocessing to model evaluation.
+This project demonstrates various machine learning techniques and algorithms through practical implementations. It serves as a comprehensive sample repository showcasing different aspects of the machine learning workflow, from feature engineering to model evaluation.
 
 ## Project Structure
 
