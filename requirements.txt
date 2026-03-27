@@ -1,0 +1,27 @@
+# Core data science
+numpy==2.4.3
+pandas==3.0.1
+matplotlib==3.10.8
+seaborn==0.13.2
+
+# Machine learning
+scikit-learn==1.8.0
+xgboost==3.2.0
+
+# Deep learning (autoencoder_hands_on.ipynb)
+torch==2.10.0
+torchvision==0.25.0
+
+# Dataset download
+gdown==5.2.1
+
+# Notebook tooling
+jupyter==1.1.1
+nbformat==5.10.4
+nbconvert==7.17.0
+ipykernel==7.2.0
+
+# Linting & testing
+flake8==7.3.0
+nbqa==1.9.1
+nbmake==1.5.5
