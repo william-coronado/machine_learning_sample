@@ -160,28 +160,6 @@ class FraudDetectionPipeline(BasePipeline):
             self.X_test, self.y_test,
         )
 
-        if not self.models:
-            raise ValueError(
-                "No trained models are available. Make sure to call `train()` before `evaluate()`."
-            )
-
-        if not isinstance(self.best_model_idx, int):
-            raise ValueError(
-                f"best_model_idx must be an integer, got {type(self.best_model_idx).__name__!r}."
-            )
-
-        if self.best_model_idx < 0 or self.best_model_idx >= len(self.models):
-            model_names = [type(m).__name__ for m in self.models]
-            valid_indices = list(range(len(self.models)))
-            raise ValueError(
-                "Invalid best_model_idx {idx}. Valid indices are {indices} "
-                "corresponding to models {names}.".format(
-                    idx=self.best_model_idx,
-                    indices=valid_indices,
-                    names=model_names,
-                )
-            )
-
         best = self.models[self.best_model_idx]
         print(f"Confusion matrix for: {type(best).__name__}")
         plot_confusion_matrix(best, self.X_test, self.y_test, threshold=self.threshold)

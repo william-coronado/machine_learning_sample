@@ -18,5 +18,5 @@ from .preprocessing import (  # noqa: F401
     split_features_target,
     train_test_split_data,
 )
-from .model_utils import train_model, train_models  # noqa: F401
+from .model_utils import train_models  # noqa: F401
 from .evaluation import evaluate_models, plot_confusion_matrix  # noqa: F401
