@@ -1,15 +1,15 @@
 """
-run_pipeline.py
+run_fraud_pipeline.py
 ---------------
 Entry point for the telco online-payment fraud detection pipeline.
 
 Usage
 -----
 Run with defaults:
-    python3 run_pipeline.py
+    python3 run_fraud_pipeline.py
 
 Override data path and split:
-    python3 run_pipeline.py --data-path data/online_payment_fraud_data.csv \
+    python3 run_fraud_pipeline.py --data-path data/online_payment_fraud_data.csv \
                             --test-size 0.2 \
                             --best-model-idx 1
 """
