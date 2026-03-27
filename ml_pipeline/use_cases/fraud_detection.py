@@ -171,7 +171,13 @@ def load_telco_fraud_data(
 
     if not os.path.exists(filepath):
         print(f"Downloading dataset to {filepath} …")
-        gdown.download(url, filepath, quiet=quiet)
+        downloaded_path = gdown.download(url, filepath, quiet=quiet)
+        # Validate that the download succeeded and produced a usable file.
+        if not downloaded_path or not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
+            raise RuntimeError(
+                f"Failed to download telco fraud dataset from {url!r} to {filepath!r}. "
+                "Please check your network connection and the URL, then try again."
+            )
     else:
         print(f"{filepath} already exists. Skipping download.")
 

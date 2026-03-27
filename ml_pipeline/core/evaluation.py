@@ -19,6 +19,18 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, ConfusionMatrixDisplay
 
 
+def _get_scores(model, X):
+    """Return probability/decision scores for ``X``, preferring ``predict_proba``."""
+    if hasattr(model, "predict_proba"):
+        return model.predict_proba(X)[:, 1]
+    if hasattr(model, "decision_function"):
+        return model.decision_function(X)
+    raise AttributeError(
+        f"{type(model).__name__!r} implements neither predict_proba nor "
+        "decision_function; cannot compute ROC-AUC scores."
+    )
+
+
 def evaluate_models(
     models: list,
     X_train: pd.DataFrame,
@@ -31,7 +43,8 @@ def evaluate_models(
 
     Parameters
     ----------
-    models  : List of fitted sklearn-compatible classifiers.
+    models  : List of fitted sklearn-compatible classifiers that expose
+              ``predict_proba`` or ``decision_function``.
     X_train, y_train : Training data (for train AUC).
     X_test, y_test   : Test data (for validation AUC).
 
@@ -42,8 +55,8 @@ def evaluate_models(
     results = []
     for model in models:
         name = type(model).__name__
-        train_proba = model.predict_proba(X_train)[:, 1]
-        test_proba = model.predict_proba(X_test)[:, 1]
+        train_proba = _get_scores(model, X_train)
+        test_proba = _get_scores(model, X_test)
 
         train_auc = roc_auc_score(y_train, train_proba)
         test_auc = roc_auc_score(y_test, test_proba)
@@ -67,18 +80,35 @@ def plot_confusion_matrix(
     X_test: pd.DataFrame,
     y_test: pd.Series,
     cmap: str = "Blues",
+    threshold: float = 0.5,
 ) -> None:
     """
     Display a confusion matrix for a single fitted classifier.
 
     Parameters
     ----------
-    model  : Fitted sklearn-compatible classifier.
-    X_test : Test feature matrix.
-    y_test : True test labels.
-    cmap   : Matplotlib colormap name.
+    model     : Fitted sklearn-compatible classifier.
+    X_test    : Test feature matrix.
+    y_test    : True test labels.
+    cmap      : Matplotlib colormap name.
+    threshold : Decision threshold applied to predicted probabilities or
+                decision scores when deriving class labels. Ignored if the
+                estimator does not expose probabilistic outputs or a
+                decision function.
     """
-    cm = ConfusionMatrixDisplay.from_estimator(model, X_test, y_test)
+    # Derive predicted labels at the specified threshold, if possible.
+    if hasattr(model, "predict_proba"):
+        scores = model.predict_proba(X_test)[:, 1]
+        y_pred = (scores >= threshold).astype(int)
+    elif hasattr(model, "decision_function"):
+        scores = model.decision_function(X_test)
+        y_pred = (scores >= threshold).astype(int)
+    else:
+        # Fallback: use the model's own class predictions (threshold assumed
+        # to be handled internally by the estimator).
+        y_pred = model.predict(X_test)
+
+    cm = ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
     cm.plot(cmap=cmap)
     plt.title(f"Confusion Matrix — {type(model).__name__}")
     plt.tight_layout()
