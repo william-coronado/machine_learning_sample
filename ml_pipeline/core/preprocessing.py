@@ -94,9 +94,10 @@ def train_test_split_data(
     y: pd.Series,
     test_size: float = 0.3,
     random_state: int = 42,
+    stratify: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
-    Stratified train/test split.
+    Train/test split with optional stratification.
 
     Parameters
     ----------
@@ -104,9 +105,17 @@ def train_test_split_data(
     y            : Target vector.
     test_size    : Fraction of data reserved for the test set.
     random_state : RNG seed for reproducibility.
+    stratify     : If True, preserve the class distribution of ``y`` in both
+                   splits. Recommended for imbalanced classification tasks;
+                   must be False for regression targets.
 
     Returns
     -------
     (X_train, X_test, y_train, y_test)
     """
-    return train_test_split(X, y, test_size=test_size, random_state=random_state, stratify=y)
+    return train_test_split(
+        X, y,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=y if stratify else None,
+    )

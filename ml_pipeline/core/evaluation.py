@@ -97,13 +97,10 @@ def plot_confusion_matrix(
                 decision function.
     """
     # Derive predicted labels at the specified threshold, if possible.
-    if hasattr(model, "predict_proba"):
-        scores = model.predict_proba(X_test)[:, 1]
+    try:
+        scores = _get_scores(model, X_test)
         y_pred = (scores >= threshold).astype(int)
-    elif hasattr(model, "decision_function"):
-        scores = model.decision_function(X_test)
-        y_pred = (scores >= threshold).astype(int)
-    else:
+    except AttributeError:
         # Fallback: use the model's own class predictions (threshold assumed
         # to be handled internally by the estimator).
         y_pred = model.predict(X_test)

@@ -109,6 +109,7 @@ class FraudDetectionPipeline(BasePipeline):
             X, y,
             test_size=self.test_size,
             random_state=self.random_state,
+            stratify=True,
         )
         print(
             f"  Train: {len(self.X_train):,} rows | "
@@ -131,6 +132,28 @@ class FraudDetectionPipeline(BasePipeline):
         The ``best_model_idx`` parameter selects which model's confusion matrix
         to display (default: XGBClassifier at index 1).
         """
+        if not self.models:
+            raise ValueError(
+                "No trained models are available. Make sure to call `train()` before `evaluate()`."
+            )
+
+        if not isinstance(self.best_model_idx, int):
+            raise ValueError(
+                f"best_model_idx must be an integer, got {type(self.best_model_idx).__name__!r}."
+            )
+
+        if self.best_model_idx < 0 or self.best_model_idx >= len(self.models):
+            model_names = [type(m).__name__ for m in self.models]
+            valid_indices = list(range(len(self.models)))
+            raise ValueError(
+                "Invalid best_model_idx {idx}. Valid indices are {indices} "
+                "corresponding to models {names}.".format(
+                    idx=self.best_model_idx,
+                    indices=valid_indices,
+                    names=model_names,
+                )
+            )
+
         self.eval_results = evaluate_models(
             self.models,
             self.X_train, self.y_train,
