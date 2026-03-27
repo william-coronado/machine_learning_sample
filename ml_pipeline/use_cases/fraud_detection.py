@@ -30,6 +30,7 @@ import os
 
 import pandas as pd
 import gdown
+from ml_pipeline.core.preprocessing import encode_categoricals, drop_columns
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -83,12 +84,10 @@ def engineer_telco_features(df: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame with engineered features; no string columns remain.
     """
     # 1. One-hot encode transaction type
-    type_dummies = pd.get_dummies(df["type"], drop_first=True)
-    df = pd.concat([df, type_dummies], axis=1)
+    df = encode_categoricals(df, CATEGORICAL_COLS, drop_first=True)
 
     # 2. Remove columns that are either identifiers, leakage, or now redundant
-    cols_to_remove = [c for c in TELCO_COLS_TO_DROP if c in df.columns]
-    df = df.drop(columns=cols_to_remove)
+    df = drop_columns(df, TELCO_COLS_TO_DROP)
 
     return df
 
@@ -180,5 +179,10 @@ def load_telco_fraud_data(
             )
     else:
         print(f"{filepath} already exists. Skipping download.")
+        if os.path.getsize(filepath) == 0:
+            raise RuntimeError(
+                f"Existing file at {filepath!r} is empty (possibly from a failed download). "
+                "Delete it and try again."
+            )
 
     return pd.read_csv(filepath)

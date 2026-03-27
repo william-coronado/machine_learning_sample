@@ -101,6 +101,8 @@ class FraudDetectionPipeline(BasePipeline):
         2. ``split_features_target``   — separate X and y.
         3. ``train_test_split_data``   — 70 / 30 stratified split.
         """
+        if self._raw is None:
+            raise ValueError("Raw data not loaded. Call load_data() first.")
         df = engineer_telco_features(self._raw)
 
         X, y = split_features_target(df, target_col=TARGET_COL)
