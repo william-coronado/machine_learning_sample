@@ -22,11 +22,16 @@ DATA_URL             : str        — Google Drive download URL for the dataset.
 engineer_telco_features(df)  → pd.DataFrame
 get_fraud_models()           → list of sklearn-compatible estimators
 load_telco_fraud_data(filepath, url, quiet) → pd.DataFrame
+
+suggest_lr_params(trial)  → dict  — Optuna search space for LogisticRegression.
+suggest_xgb_params(trial) → dict  — Optuna search space for XGBClassifier.
+suggest_rf_params(trial)  → dict  — Optuna search space for RandomForestClassifier.
 """
 
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import gdown
@@ -34,6 +39,9 @@ from ml_pipeline.core.preprocessing import encode_categoricals, drop_columns
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+
+if TYPE_CHECKING:
+    import optuna
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -139,6 +147,74 @@ def get_fraud_models() -> list:
             random_state=7,
         ),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Hyperparameter search spaces (Optuna)
+# ---------------------------------------------------------------------------
+
+def suggest_lr_params(trial: "optuna.Trial") -> dict:
+    """
+    Suggest hyperparameters for ``LogisticRegression``.
+
+    Parameters
+    ----------
+    trial : An Optuna trial object.
+
+    Returns
+    -------
+    dict of constructor kwargs suitable for ``LogisticRegression(**params)``.
+    """
+    return {
+        "C": trial.suggest_float("C", 1e-3, 10.0, log=True),
+        "solver": trial.suggest_categorical("solver", ["lbfgs", "saga"]),
+        "max_iter": 1000,
+    }
+
+
+def suggest_xgb_params(trial: "optuna.Trial") -> dict:
+    """
+    Suggest hyperparameters for ``XGBClassifier``.
+
+    Parameters
+    ----------
+    trial : An Optuna trial object.
+
+    Returns
+    -------
+    dict of constructor kwargs suitable for ``XGBClassifier(**params)``.
+    """
+    return {
+        "n_estimators": trial.suggest_int("n_estimators", 100, 500),
+        "max_depth": trial.suggest_int("max_depth", 3, 8),
+        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+        "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+        "reg_lambda": trial.suggest_float("reg_lambda", 1e-2, 10.0, log=True),
+        "eval_metric": "logloss",
+        "random_state": 42,
+    }
+
+
+def suggest_rf_params(trial: "optuna.Trial") -> dict:
+    """
+    Suggest hyperparameters for ``RandomForestClassifier``.
+
+    Parameters
+    ----------
+    trial : An Optuna trial object.
+
+    Returns
+    -------
+    dict of constructor kwargs suitable for ``RandomForestClassifier(**params)``.
+    """
+    return {
+        "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+        "max_depth": trial.suggest_int("max_depth", 5, 30),
+        "min_samples_split": trial.suggest_int("min_samples_split", 2, 20),
+        "max_features": trial.suggest_categorical("max_features", ["sqrt", "log2"]),
+        "random_state": 42,
+    }
 
 
 # ---------------------------------------------------------------------------
