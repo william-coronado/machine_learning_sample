@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 data/train_identity.csv
 data/train_transaction.csv
+.DS_Store
