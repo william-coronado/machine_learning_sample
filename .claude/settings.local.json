@@ -2,7 +2,20 @@
   "permissions": {
     "allow": [
       "Bash(gh pr:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(python3 -c 'import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('\\\\''mcpServers'\\\\'', {}\\), indent=2\\)\\); print\\('\\\\''---PROJECT LEVEL---'\\\\''\\); *)",
+      "Bash(claude mcp *)",
+      "Bash(env)",
+      "Bash(gh auth *)",
+      "Bash(python3 -c ' *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(npx --version)",
+      "Bash(npm --version)",
+      "Bash(python3 -m json.tool)",
+      "Bash(brew list *)",
+      "Bash(echo \"brew_node_exit=$?\")",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(brew install *)"
     ]
   }
 }
