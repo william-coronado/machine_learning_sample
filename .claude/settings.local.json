@@ -15,7 +15,18 @@
       "Bash(brew list *)",
       "Bash(echo \"brew_node_exit=$?\")",
       "Read(//opt/homebrew/bin/**)",
-      "Bash(brew install *)"
+      "Bash(brew install *)",
+      "Bash(python3 -m flake8 ml_pipeline/core/tuning.py --max-line-length=120 --ignore=E501,W503,E402)",
+      "Bash(python3 -c \"from ml_pipeline.core.tuning import run_optuna_study, sklearn_cv_objective, compare_search_strategies, plot_optimization_history; print\\('ok'\\)\")",
+      "Bash(ls venv* .venv*)",
+      "Bash(find . -maxdepth 2 -iname \"*venv*\")",
+      "Bash(.venv/bin/python -m flake8 ml_pipeline/core/tuning.py --max-line-length=120 --ignore=E501,W503,E402)",
+      "Bash(.venv/bin/python -c \"from ml_pipeline.core.tuning import run_optuna_study, sklearn_cv_objective, compare_search_strategies, plot_optimization_history; print\\('ok'\\)\")",
+      "Bash(.venv/bin/python -c \"import optuna\")",
+      "Bash(.venv/bin/pip show *)",
+      "Bash(.venv/bin/python -m py_compile ml_pipeline/core/tuning.py)",
+      "Bash(python3)",
+      "Bash(.venv/bin/python -c ' *)"
     ]
   }
 }

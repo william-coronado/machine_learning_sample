@@ -10,13 +10,13 @@ It also offers a comparison helper that benchmarks Optuna against
 
 Public API
 ----------
-run_optuna_study(objective_fn, n_trials, direction, study_name, use_pruner)
+run_optuna_study(objective_fn, n_trials, direction, study_name, use_pruner, sampler, pruner)
     → optuna.Study
 
-sklearn_cv_objective(model_fn, X, y, cv, scoring)
+sklearn_cv_objective(model_fn, X, y, cv, scoring, n_jobs)
     → Callable[[optuna.Trial], float]
 
-compare_search_strategies(model_fn, param_grid, X, y, n_iter, cv)
+compare_search_strategies(model_fn, param_grid, X, y, n_iter, cv, run_grid, comparison_param_grid)
     → pd.DataFrame
 
 plot_optimization_history(study)    → None
@@ -49,6 +49,8 @@ def run_optuna_study(
     direction: str = "maximize",
     study_name: str | None = None,
     use_pruner: bool = True,
+    sampler: "optuna.samplers.BaseSampler | None" = None,
+    pruner: "optuna.pruners.BasePruner | None" = None,
 ) -> "optuna.Study":
     """
     Create and run an Optuna study.
@@ -61,17 +63,23 @@ def run_optuna_study(
     n_trials     : Number of trials to run.
     direction    : ``"maximize"`` (e.g. ROC-AUC) or ``"minimize"`` (e.g. loss).
     study_name   : Optional name for the study (useful when persisting to SQLite).
-    use_pruner   : If True, attach a ``MedianPruner`` to cut unpromising trials
-                   early (requires the objective to report intermediate values).
+    use_pruner   : If True and ``pruner`` is not given, attach a ``MedianPruner``
+                   to cut unpromising trials early (requires the objective to
+                   report intermediate values). Ignored if ``pruner`` is set.
+    sampler      : Optional Optuna sampler. Defaults to Optuna's standard
+                   sampler (TPESampler) when ``None``.
+    pruner       : Optional Optuna pruner. Overrides ``use_pruner`` when given.
 
     Returns
     -------
     optuna.Study with all completed trials.
     """
-    pruner = optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=0) if use_pruner else None
+    if pruner is None and use_pruner:
+        pruner = optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=0)
     study = optuna.create_study(
         direction=direction,
         study_name=study_name,
+        sampler=sampler,
         pruner=pruner,
     )
     study.optimize(objective_fn, n_trials=n_trials, show_progress_bar=False)
@@ -84,6 +92,7 @@ def sklearn_cv_objective(
     y: pd.Series,
     cv: int = 5,
     scoring: str = "roc_auc",
+    n_jobs: int | None = None,
 ) -> Callable:
     """
     Factory: wrap a ``model_fn(trial) -> estimator`` into an Optuna objective.
@@ -100,6 +109,10 @@ def sklearn_cv_objective(
     X, y     : Full training dataset used for cross-validation.
     cv       : Number of CV folds.
     scoring  : sklearn scoring string (default: ``"roc_auc"``).
+    n_jobs   : Parallel jobs for ``cross_val_score``. Defaults to ``None``
+               (single job) to avoid CPU oversubscription when the Optuna
+               study itself is parallelised. Pass ``-1`` only if the study
+               runs in a single process.
 
     Returns
     -------
@@ -107,7 +120,7 @@ def sklearn_cv_objective(
     """
     def objective(trial: "optuna.Trial") -> float:
         model = model_fn(trial)
-        scores = cross_val_score(model, X, y, cv=cv, scoring=scoring, n_jobs=-1)
+        scores = cross_val_score(model, X, y, cv=cv, scoring=scoring, n_jobs=n_jobs)
         return float(scores.mean())
 
     return objective
@@ -128,6 +141,8 @@ def compare_search_strategies(
     cv: int = 5,
     scoring: str = "roc_auc",
     random_state: int = 42,
+    run_grid: bool = True,
+    comparison_param_grid: dict | None = None,
 ) -> pd.DataFrame:
     """
     Benchmark GridSearchCV, RandomizedSearchCV, and Optuna on the same task.
@@ -145,27 +160,36 @@ def compare_search_strategies(
     cv                   : Number of CV folds.
     scoring              : sklearn scoring metric.
     random_state         : RNG seed for reproducibility.
+    run_grid             : If False, skip the ``GridSearchCV`` benchmark — useful
+                           when ``param_grid`` is too large to search exhaustively.
+    comparison_param_grid: Optional smaller grid used only for ``GridSearchCV``
+                           (e.g. when ``param_grid`` is too large to search
+                           exhaustively but ``run_grid`` is still desired).
+                           Defaults to ``param_grid`` when not given.
 
     Returns
     -------
     pd.DataFrame with columns:
         strategy, best_score, search_time_s, n_evaluations
+    GridSearchCV is omitted entirely when ``run_grid`` is False.
     """
     rows = []
 
     # --- GridSearchCV ---
-    t0 = time.perf_counter()
-    grid = GridSearchCV(
-        model_fn(), param_grid, cv=cv, scoring=scoring, n_jobs=-1, refit=False,
-    )
-    grid.fit(X, y)
-    grid_time = time.perf_counter() - t0
-    rows.append({
-        "strategy": "GridSearchCV",
-        "best_score": grid.best_score_,
-        "search_time_s": round(grid_time, 2),
-        "n_evaluations": len(grid.cv_results_["mean_test_score"]),
-    })
+    if run_grid:
+        grid_param_grid = comparison_param_grid if comparison_param_grid is not None else param_grid
+        t0 = time.perf_counter()
+        grid = GridSearchCV(
+            model_fn(), grid_param_grid, cv=cv, scoring=scoring, n_jobs=-1, refit=False,
+        )
+        grid.fit(X, y)
+        grid_time = time.perf_counter() - t0
+        rows.append({
+            "strategy": "GridSearchCV",
+            "best_score": grid.best_score_,
+            "search_time_s": round(grid_time, 2),
+            "n_evaluations": len(grid.cv_results_["mean_test_score"]),
+        })
 
     # --- RandomizedSearchCV ---
     t0 = time.perf_counter()
@@ -217,11 +241,15 @@ def plot_optimization_history(study: "optuna.Study") -> None:
         fig.show()
     except ImportError:
         import matplotlib.pyplot as plt
-        values = [t.value for t in study.trials if t.value is not None]
+        completed = [(t.number, t.value) for t in study.trials if t.value is not None]
+        if not completed:
+            print("No completed trials to plot (all trials were pruned or failed).")
+            return
+        numbers, values = zip(*completed)
         best_so_far = [max(values[: i + 1]) for i in range(len(values))]
         fig, ax = plt.subplots(figsize=(9, 4))
-        ax.scatter(range(len(values)), values, alpha=0.5, label="Trial value", s=20)
-        ax.plot(range(len(best_so_far)), best_so_far, color="red", label="Best so far")
+        ax.scatter(numbers, values, alpha=0.5, label="Trial value", s=20)
+        ax.plot(numbers, best_so_far, color="red", label="Best so far")
         ax.set_xlabel("Trial")
         ax.set_ylabel("Objective value")
         ax.set_title(f"Optimization history — {study.study_name or 'study'}")
