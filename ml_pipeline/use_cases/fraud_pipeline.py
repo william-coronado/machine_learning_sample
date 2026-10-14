@@ -20,6 +20,8 @@ Example
 
 from __future__ import annotations
 
+import os
+
 import pandas as pd
 
 from ml_pipeline.core.base_pipeline import BasePipeline
@@ -62,6 +64,7 @@ class FraudDetectionPipeline(BasePipeline):
         random_state: int = 42,
         threshold: float = FRAUD_THRESHOLD,
         best_model_idx: int = 1,
+        show_plots: bool | None = None,
     ) -> None:
         self.data_path = data_path
         self.data_url = data_url
@@ -69,6 +72,7 @@ class FraudDetectionPipeline(BasePipeline):
         self.random_state = random_state
         self.threshold = threshold
         self.best_model_idx = best_model_idx
+        self.show_plots = show_plots if show_plots is not None else os.environ.get("CI") is None
 
         # Set by lifecycle hooks
         self._raw: pd.DataFrame | None = None
@@ -148,12 +152,8 @@ class FraudDetectionPipeline(BasePipeline):
             model_names = [type(m).__name__ for m in self.models]
             valid_indices = list(range(len(self.models)))
             raise ValueError(
-                "Invalid best_model_idx {idx}. Valid indices are {indices} "
-                "corresponding to models {names}.".format(
-                    idx=self.best_model_idx,
-                    indices=valid_indices,
-                    names=model_names,
-                )
+                f"Invalid best_model_idx {self.best_model_idx}. "
+                f"Valid indices are {valid_indices} corresponding to models {model_names}."
             )
 
         self.eval_results = evaluate_models(
@@ -164,4 +164,10 @@ class FraudDetectionPipeline(BasePipeline):
 
         best = self.models[self.best_model_idx]
         print(f"Confusion matrix for: {type(best).__name__}")
-        plot_confusion_matrix(best, self.X_test, self.y_test, threshold=self.threshold)
+        plot_confusion_matrix(
+            best,
+            self.X_test,
+            self.y_test,
+            threshold=self.threshold,
+            show_plot=self.show_plots,
+        )
