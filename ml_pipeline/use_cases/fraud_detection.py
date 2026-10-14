@@ -230,7 +230,7 @@ def load_telco_fraud_data(
     Load the telco online-payment fraud CSV, downloading it if necessary.
 
     The file is downloaded from Google Drive only when it does not already
-    exist at ``filepath``.  The parent directory is created automatically.
+    exist at ``filepath``. The parent directory is created automatically.
 
     Parameters
     ----------
@@ -247,18 +247,35 @@ def load_telco_fraud_data(
     if not os.path.exists(filepath):
         print(f"Downloading dataset to {filepath} …")
         downloaded_path = gdown.download(url, filepath, quiet=quiet)
-        # Validate that the download succeeded and produced a usable file.
-        if not downloaded_path or not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
+        if (
+            not downloaded_path
+            or not os.path.exists(filepath)
+            or os.path.getsize(filepath) == 0
+        ):
             raise RuntimeError(
                 f"Failed to download telco fraud dataset from {url!r} to {filepath!r}. "
                 "Please check your network connection and the URL, then try again."
             )
     else:
         print(f"{filepath} already exists. Skipping download.")
-        if os.path.getsize(filepath) == 0:
-            raise RuntimeError(
-                f"Existing file at {filepath!r} is empty (possibly from a failed download). "
-                "Delete it and try again."
-            )
 
-    return pd.read_csv(filepath)
+    if os.path.getsize(filepath) == 0:
+        raise RuntimeError(
+            f"Existing file at {filepath!r} is empty (possibly from a failed download). "
+            "Please remove the empty file and rerun the pipeline."
+        )
+
+    try:
+        df = pd.read_csv(filepath)
+    except Exception as exc:  # pragma: no cover - defensive guard for bad downloads.
+        raise RuntimeError(
+            f"Downloaded dataset at {filepath!r} could not be parsed as a CSV file. "
+            "The file may be incomplete or corrupted."
+        ) from exc
+
+    if df.empty:
+        raise RuntimeError(
+            f"Dataset at {filepath!r} is empty after loading; please check the source file."
+        )
+
+    return df
