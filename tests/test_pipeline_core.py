@@ -76,8 +76,12 @@ def test_invalid_best_model_idx_raises_value_error():
         pipeline.evaluate()
 
 
-def test_load_telco_fraud_data_raises_on_missing_file(tmp_path):
+def test_load_telco_fraud_data_raises_on_missing_file(tmp_path, monkeypatch):
     missing = tmp_path / "missing.csv"
+    monkeypatch.setattr(
+        "ml_pipeline.use_cases.fraud_detection.gdown.download",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("network down")),
+    )
 
     with pytest.raises(RuntimeError, match="Failed to download"):
         load_telco_fraud_data(filepath=str(missing), url="https://example.com/does-not-matter.csv")
