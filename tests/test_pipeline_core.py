@@ -1,3 +1,5 @@
+import argparse
+
 import pandas as pd
 import pytest
 
@@ -9,6 +11,7 @@ from ml_pipeline.core.preprocessing import (
 )
 from ml_pipeline.use_cases.fraud_detection import load_telco_fraud_data
 from ml_pipeline.use_cases.fraud_pipeline import FraudDetectionPipeline
+from run_fraud_pipeline import _valid_test_size, _valid_threshold, parse_args
 
 
 @pytest.fixture
@@ -118,7 +121,13 @@ def test_fraud_pipeline_run_smoke(monkeypatch):
         lambda filepath, url: synthetic,
     )
 
-    pipeline = FraudDetectionPipeline(data_path="fake.csv", test_size=0.5, random_state=42, best_model_idx=1, show_plots=False)
+    pipeline = FraudDetectionPipeline(
+        data_path="fake.csv",
+        test_size=0.5,
+        random_state=42,
+        best_model_idx=1,
+        show_plots=False,
+    )
     pipeline.load_data()
     pipeline.preprocess()
     pipeline.models = pipeline.build_models()
@@ -128,3 +137,20 @@ def test_fraud_pipeline_run_smoke(monkeypatch):
     assert len(pipeline.eval_results) == 3
     assert pipeline.eval_results[1]["name"] == "XGBClassifier"
     assert pipeline.X_train is not None and pipeline.X_test is not None
+
+
+def test_cli_validators_and_parser():
+    assert _valid_test_size("0.25") == 0.25
+    assert _valid_threshold("0.7") == 0.7
+
+    with pytest.raises(argparse.ArgumentTypeError):
+        _valid_test_size("1.0")
+
+    with pytest.raises(argparse.ArgumentTypeError):
+        _valid_threshold("0.0")
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr("sys.argv", ["run_fraud_pipeline.py", "--best-model-idx", "0"])
+    args = parse_args()
+    assert args.best_model_idx == 0
+    monkeypatch.undo()
