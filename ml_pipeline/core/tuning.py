@@ -246,7 +246,8 @@ def plot_optimization_history(study: "optuna.Study") -> None:
             print("No completed trials to plot (all trials were pruned or failed).")
             return
         numbers, values = zip(*completed)
-        best_so_far = [max(values[: i + 1]) for i in range(len(values))]
+        best_fn = max if study.direction == optuna.study.StudyDirection.MAXIMIZE else min
+        best_so_far = [best_fn(values[: i + 1]) for i in range(len(values))]
         fig, ax = plt.subplots(figsize=(9, 4))
         ax.scatter(numbers, values, alpha=0.5, label="Trial value", s=20)
         ax.plot(numbers, best_so_far, color="red", label="Best so far")
