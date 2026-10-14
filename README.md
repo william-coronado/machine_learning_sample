@@ -128,6 +128,12 @@ python3 -m flake8 feature_engineering/ ml_pipeline/ run_fraud_pipeline.py \
 
 ## Testing
 
+Run the focused Python unit tests for the pipeline utilities:
+
+```bash
+python3 -m pytest tests/ -v
+```
+
 Run notebooks as tests using nbmake:
 
 ```bash

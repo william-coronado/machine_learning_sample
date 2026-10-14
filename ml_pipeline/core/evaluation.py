@@ -87,6 +87,7 @@ def plot_confusion_matrix(
     y_test: pd.Series,
     cmap: str = "Blues",
     threshold: float = 0.5,
+    show_plot: bool = True,
 ) -> None:
     """
     Display a confusion matrix for a single fitted classifier.
@@ -101,6 +102,8 @@ def plot_confusion_matrix(
                 decision scores when deriving class labels. Ignored if the
                 estimator does not expose probabilistic outputs or a
                 decision function.
+    show_plot : If True, call ``plt.show()``. Set to False for headless or CI
+                execution where rendering is not needed.
     """
     # Derive predicted labels at the specified threshold, if possible.
     try:
@@ -117,4 +120,7 @@ def plot_confusion_matrix(
     ConfusionMatrixDisplay.from_predictions(y_test, y_pred, cmap=cmap)
     plt.title(f"Confusion Matrix — {type(model).__name__}")
     plt.tight_layout()
-    plt.show()
+    if show_plot:
+        plt.show()
+    else:
+        plt.close()

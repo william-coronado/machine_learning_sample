@@ -15,9 +15,25 @@ Override data path and split:
 """
 
 import argparse
+import os
+import warnings
 
+from ml_pipeline.use_cases.fraud_detection import FRAUD_THRESHOLD, get_fraud_models
 from ml_pipeline.use_cases.fraud_pipeline import FraudDetectionPipeline
-from ml_pipeline.use_cases.fraud_detection import FRAUD_THRESHOLD
+
+
+def _valid_test_size(value: str) -> float:
+    test_size = float(value)
+    if not 0.0 < test_size < 1.0:
+        raise argparse.ArgumentTypeError("--test-size must be between 0 and 1 (exclusive).")
+    return test_size
+
+
+def _valid_threshold(value: str) -> float:
+    threshold = float(value)
+    if not 0.0 < threshold < 1.0:
+        raise argparse.ArgumentTypeError("--threshold must be between 0 and 1 (exclusive).")
+    return threshold
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,7 +47,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--test-size",
-        type=float,
+        type=_valid_test_size,
         default=0.30,
         help="Fraction of data reserved for testing (default: 0.30).",
     )
@@ -43,7 +59,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--threshold",
-        type=float,
+        type=_valid_threshold,
         default=FRAUD_THRESHOLD,
         help=f"Decision threshold for fraud classification (default: {FRAUD_THRESHOLD}).",
     )
@@ -58,6 +74,20 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+
+    if not os.path.exists(args.data_path):
+        warnings.warn(
+            f"Data file not found at {args.data_path!r}; the pipeline will attempt to download it "
+            "from the configured dataset URL.",
+            stacklevel=2,
+        )
+
+    model_count = len(get_fraud_models())
+    if args.best_model_idx < 0 or args.best_model_idx >= model_count:
+        raise ValueError(
+            f"--best-model-idx must be between 0 and {model_count - 1}. "
+            f"Got {args.best_model_idx}."
+        )
 
     pipeline = FraudDetectionPipeline(
         data_path=args.data_path,
