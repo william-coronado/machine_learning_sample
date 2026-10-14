@@ -39,14 +39,23 @@ def test_split_features_target_and_split_invariants(sample_df):
     assert y.name == "isFraud"
     assert y.tolist() == [0, 1, 0]
 
+    y_balanced = pd.Series([0, 0, 1, 1], name="isFraud")
+    X_balanced = pd.DataFrame(
+        {
+            "type": ["PAYMENT", "TRANSFER", "CASH_OUT", "DEBIT"],
+            "amount": [10.0, 25.0, 30.0, 35.0],
+            "nameOrig": ["a", "b", "c", "d"],
+        }
+    )
+
     X_train, X_test, y_train, y_test = train_test_split_data(
-        X, y, test_size=0.5, random_state=42, stratify=True
+        X_balanced, y_balanced, test_size=0.5, random_state=42, stratify=True
     )
 
     assert len(X_train) == len(y_train) == 2
-    assert len(X_test) == len(y_test) == 1
+    assert len(X_test) == len(y_test) == 2
     assert set(y_train.unique()) == {0, 1}
-    assert set(y_test.unique()).issubset({0, 1})
+    assert set(y_test.unique()) == {0, 1}
 
 
 def test_drop_columns_ignores_missing_names(sample_df):
@@ -83,5 +92,5 @@ def test_load_telco_fraud_data_raises_on_invalid_csv(tmp_path):
     invalid = tmp_path / "invalid.csv"
     invalid.write_text("not,a,valid,csv\n1,2\n")
 
-    with pytest.raises(RuntimeError, match="could not be parsed"):
+    with pytest.raises(RuntimeError, match="missing required columns"):
         load_telco_fraud_data(filepath=str(invalid), url="https://example.com/ignored.csv")

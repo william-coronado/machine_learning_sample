@@ -246,7 +246,14 @@ def load_telco_fraud_data(
 
     if not os.path.exists(filepath):
         print(f"Downloading dataset to {filepath} …")
-        downloaded_path = gdown.download(url, filepath, quiet=quiet)
+        try:
+            downloaded_path = gdown.download(url, filepath, quiet=quiet)
+        except Exception as exc:  # pragma: no cover - network errors are environment-dependent.
+            raise RuntimeError(
+                f"Failed to download telco fraud dataset from {url!r} to {filepath!r}. "
+                "Please check your network connection and the URL, then try again."
+            ) from exc
+
         if (
             not downloaded_path
             or not os.path.exists(filepath)
@@ -276,6 +283,14 @@ def load_telco_fraud_data(
     if df.empty:
         raise RuntimeError(
             f"Dataset at {filepath!r} is empty after loading; please check the source file."
+        )
+
+    required_columns = {TARGET_COL, "type"}
+    missing_columns = sorted(required_columns - set(df.columns))
+    if missing_columns:
+        raise RuntimeError(
+            f"Dataset at {filepath!r} is not a valid telco fraud CSV: missing required columns "
+            f"{missing_columns}."
         )
 
     return df
