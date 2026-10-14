@@ -94,3 +94,37 @@ def test_load_telco_fraud_data_raises_on_invalid_csv(tmp_path):
 
     with pytest.raises(RuntimeError, match="missing required columns"):
         load_telco_fraud_data(filepath=str(invalid), url="https://example.com/ignored.csv")
+
+
+def test_fraud_pipeline_run_smoke(monkeypatch):
+    synthetic = pd.DataFrame(
+        {
+            "step": list(range(8)),
+            "type": ["PAYMENT", "TRANSFER", "CASH_OUT", "DEBIT", "PAYMENT", "TRANSFER", "CASH_OUT", "DEBIT"],
+            "amount": [10.0, 15.0, 20.0, 25.0, 12.0, 18.0, 22.0, 28.0],
+            "oldbalanceOrg": [100.0, 200.0, 300.0, 400.0, 110.0, 210.0, 310.0, 410.0],
+            "newbalanceOrig": [90.0, 185.0, 280.0, 375.0, 98.0, 192.0, 288.0, 382.0],
+            "oldbalanceDest": [0.0, 0.0, 100.0, 100.0, 0.0, 0.0, 110.0, 110.0],
+            "newbalanceDest": [0.0, 0.0, 90.0, 90.0, 0.0, 0.0, 98.0, 98.0],
+            "nameOrig": ["a", "b", "c", "d", "e", "f", "g", "h"],
+            "nameDest": ["x", "y", "z", "q", "r", "s", "t", "u"],
+            "isFlaggedFraud": [0, 0, 0, 0, 0, 0, 0, 0],
+            "isFraud": [0, 1, 0, 1, 0, 1, 0, 1],
+        }
+    )
+
+    monkeypatch.setattr(
+        "ml_pipeline.use_cases.fraud_pipeline.load_telco_fraud_data",
+        lambda filepath, url: synthetic,
+    )
+
+    pipeline = FraudDetectionPipeline(data_path="fake.csv", test_size=0.5, random_state=42, best_model_idx=1, show_plots=False)
+    pipeline.load_data()
+    pipeline.preprocess()
+    pipeline.models = pipeline.build_models()
+    pipeline.train()
+    pipeline.evaluate()
+
+    assert len(pipeline.eval_results) == 3
+    assert pipeline.eval_results[1]["name"] == "XGBClassifier"
+    assert pipeline.X_train is not None and pipeline.X_test is not None
